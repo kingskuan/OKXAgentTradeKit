@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>反KOL Agent · OKX Agent Trade Kit</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+
+:root {
+–bg:       #050709;
+–bg2:      #090d12;
+–bg3:      #0e1520;
+–line:     rgba(255,255,255,0.06);
+–line2:    rgba(255,255,255,0.12);
+–red:      #ff2d55;
+–red2:     rgba(255,45,85,0.12);
+–red3:     rgba(255,45,85,0.06);
+–yellow:   #ffc300;
+–yellow2:  rgba(255,195,0,0.1);
+–green:    #00d68f;
+–green2:   rgba(0,214,143,0.1);
+–blue:     #0099ff;
+–blue2:    rgba(0,153,255,0.1);
+–t1:       #f0f4f8;
+–t2:       #8899aa;
+–t3:       #3d5060;
+–mono:     ‘IBM Plex Mono’, monospace;
+–sans:     ‘Noto Sans SC’, sans-serif;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html { font-size:16px; }
+
+body {
+background: #050709 !important;
+color: #f0f4f8;
+font-family: var(–sans);
+min-height: 100vh;
+overflow-x: hidden;
+-webkit-font-smoothing: antialiased;
+}
+
+/* ── AMBIENT GLOW ── */
+body::before {
+content: ‘’;
+position: fixed;
+top: -20%;
+left: 50%;
+transform: translateX(-50%);
+width: 700px;
+height: 400px;
+background: radial-gradient(ellipse, rgba(255,45,85,0.12) 0%, transparent 70%);
+pointer-events: none;
+z-index: 0;
+}
+
+/* ── SCANLINES ── */
+body::after {
+content: ‘’;
+position: fixed;
+inset: 0;
+background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+pointer-events: none;
+z-index: 9999;
+}
+
+/* ── NAV ── */
+nav {
+position: sticky;
+top: 0;
+z-index: 500;
+background: rgba(5,7,9,0.85);
+backdrop-filter: blur(20px) saturate(160%);
+border-bottom: 1px solid var(–line);
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 0 32px;
+height: 56px;
+}
+
+.nav-brand {
+display: flex;
+align-items: center;
+gap: 10px;
+font-family: var(–mono);
+font-size: 13px;
+font-weight: 700;
+color: var(–t1);
+letter-spacing: 0.5px;
+}
+.nav-dot {
+width: 8px; height: 8px;
+background: var(–red);
+border-radius: 50%;
+box-shadow: 0 0 8px var(–red);
+animation: breathe 2.5s ease-in-out infinite;
+}
+@keyframes breathe {
+0%,100% { opacity:1; transform:scale(1); }
+50% { opacity:0.5; transform:scale(0.7); }
+}
+.nav-slash { color: var(–red); margin: 0 4px; }
+
+.nav-right {
+display: flex;
+align-items: center;
+gap: 12px;
+}
+.nav-tag {
+font-family: var(–mono);
+font-size: 9px;
+letter-spacing: 2px;
+padding: 4px 10px;
+border: 1px solid;
+text-transform: uppercase;
+}
+.nav-tag.okx { color: var(–yellow); border-color: rgba(255,195,0,0.3); background: var(–yellow2); }
+.nav-tag.live { color: var(–green); border-color: rgba(0,214,143,0.3); background: var(–green2); }
+
+/* ── LAYOUT ── */
+.page { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 0 24px 80px; background: #050709; }
+
+/* ── HERO ── */
+.hero {
+padding: 72px 0 56px;
+display: grid;
+grid-template-columns: 1fr auto;
+gap: 40px;
+align-items: end;
+border-bottom: 1px solid rgba(255,255,255,0.06);
+background: #050709;
+}
+@media(max-width:640px) { .hero { grid-template-columns: 1fr; } }
+
+.hero-left {}
+.hero-eyebrow {
+font-family: var(–mono);
+font-size: 10px;
+letter-spacing: 4px;
+color: var(–red);
+margin-bottom: 20px;
+display: flex;
+align-items: center;
+gap: 10px;
+}
+.hero-eyebrow::before {
+content: ‘’;
+display: inline-block;
+width: 24px;
+height: 1px;
+background: var(–red);
+}
+
+.hero h1 {
+font-size: clamp(36px, 5.5vw, 68px);
+font-weight: 900;
+line-height: 1.0;
+letter-spacing: -1px;
+margin-bottom: 20px;
+}
+.h1-dim { color: #8899aa; }
+.h1-red { color: var(–red); }
+
+.hero-desc {
+font-size: 15px;
+color: #8899aa;
+line-height: 1.8;
+max-width: 520px;
+}
+.hero-desc strong { color: #f0f4f8; font-weight: 500; }
+
+.hero-stats {
+display: flex;
+flex-direction: column;
+gap: 2px;
+min-width: 160px;
+}
+.hstat {
+background: var(–bg3);
+border: 1px solid var(–line);
+padding: 14px 18px;
+}
+.hstat-val {
+font-family: var(–mono);
+font-size: 22px;
+font-weight: 700;
+color: var(–red);
+line-height: 1;
+margin-bottom: 4px;
+}
+.hstat-label {
+font-family: var(–mono);
+font-size: 9px;
+letter-spacing: 2px;
+color: var(–t3);
+}
+
+/* ── SEARCH ── */
+.search-section { padding: 40px 0; }
+
+.s-label {
+font-family: var(–mono);
+font-size: 10px;
+letter-spacing: 3px;
+color: var(–t3);
+margin-bottom: 10px;
+}
+
+.search-wrap {
+display: flex;
+border: 1px solid rgba(255,45,85,0.35);
+background: var(–bg2);
+transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-wrap:focus-within {
+border-color: var(–red);
+box-shadow: 0 0 0 4px rgba(255,45,85,0.08), inset 0 0 32px rgba(255,45,85,0.03);
+}
+.s-pre {
+font-family: var(–mono);
+font-size: 14px;
+color: var(–red);
+padding: 15px 18px;
+border-right: 1px solid var(–line);
+flex-shrink: 0;
+user-select: none;
+}
+#kolInput {
+flex: 1;
+background: transparent;
+border: none;
+outline: none;
+color: var(–t1);
+font-family: var(–mono);
+font-size: 14px;
+padding: 15px 18px;
+caret-color: var(–red);
+}
+#kolInput::placeholder { color: var(–t3); font-size: 13px; }
+.s-btn {
+background: var(–red);
+border: none;
+color: #fff;
+font-family: var(–mono);
+font-size: 11px;
+font-weight: 700;
+letter-spacing: 2px;
+padding: 0 28px;
+cursor: pointer;
+transition: background 0.15s;
+flex-shrink: 0;
+}
+.s-btn:hover { background: #ff4d6a; }
+.s-btn:active { background: #e0001e; }
+
+.quick-row {
+display: flex;
+gap: 8px;
+margin-top: 12px;
+align-items: center;
+flex-wrap: wrap;
+}
+.q-label { font-family: var(–mono); font-size: 9px; color: var(–t3); letter-spacing: 2px; }
+.qpick {
+font-family: var(–mono);
+font-size: 10px;
+color: var(–t2);
+border: 1px solid var(–line2);
+padding: 5px 12px;
+cursor: pointer;
+transition: all 0.15s;
+background: transparent;
+display: flex;
+align-items: center;
+gap: 5px;
+}
+.qpick:hover { color: var(–t1); border-color: var(–t2); background: rgba(255,255,255,0.03); }
+.qpick .dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.dot.r { background: var(–red); }
+.dot.g { background: var(–green); }
+.dot.y { background: var(–yellow); }
+
+/* ── LOADING ── */
+#loading {
+display: none;
+padding: 60px 0;
+text-align: center;
+}
+.ld-inner { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.ld-title {
+font-family: var(–mono);
+font-size: 11px;
+letter-spacing: 3px;
+color: var(–red);
+margin-bottom: 8px;
+align-self: center;
+}
+.ld-bar {
+width: 300px;
+height: 1px;
+background: var(–line2);
+position: relative;
+overflow: hidden;
+align-self: center;
+margin-bottom: 16px;
+}
+.ld-bar::after {
+content: ‘’;
+position: absolute;
+left: -30%;
+width: 30%;
+height: 100%;
+background: linear-gradient(90deg, transparent, var(–red), transparent);
+animation: sweep 0.9s linear infinite;
+}
+@keyframes sweep { to { left: 130%; } }
+.ld-step {
+font-family: var(–mono);
+font-size: 10px;
+color: var(–t3);
+letter-spacing: 1px;
+padding: 2px 0;
+transition: color 0.3s;
+}
+.ld-step.done { color: var(–green); }
+.ld-step.done::before { content: ’✓  ’; }
+.ld-step.active { color: var(–t2); }
+.ld-step.active::before { content: ’›  ’; }
+
+/* ── RESULT ── */
+#result { display: none; animation: fadeSlide 0.4s ease both; }
+@keyframes fadeSlide {
+from { opacity:0; transform: translateY(12px); }
+to   { opacity:1; transform: translateY(0); }
+}
+
+/* Profile row */
+.profile-row {
+display: flex;
+align-items: flex-start;
+justify-content: space-between;
+gap: 24px;
+padding: 32px 0 24px;
+border-bottom: 1px solid var(–line);
+flex-wrap: wrap;
+}
+
+.profile-left { display: flex; align-items: center; gap: 20px; }
+.avatar {
+width: 60px; height: 60px;
+background: var(–bg3);
+border: 1px solid var(–line2);
+display: flex; align-items: center; justify-content: center;
+font-size: 26px;
+position: relative;
+flex-shrink: 0;
+}
+.avatar-badge {
+position: absolute;
+bottom: -6px; right: -6px;
+font-family: var(–mono);
+font-size: 8px;
+font-weight: 700;
+letter-spacing: 1px;
+padding: 2px 5px;
+background: var(–red);
+color: #fff;
+}
+.avatar-badge.safe { background: var(–green); color: #000; }
+.profile-name { font-size: 24px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 4px; }
+.profile-handle { font-family: var(–mono); font-size: 11px; color: var(–t3); }
+
+.score-block { text-align: right; flex-shrink: 0; }
+.score-eyebrow { font-family: var(–mono); font-size: 9px; letter-spacing: 3px; color: var(–t3); margin-bottom: 6px; }
+.score-num {
+font-family: var(–mono);
+font-size: 64px;
+font-weight: 700;
+line-height: 1;
+letter-spacing: -2px;
+}
+.score-num.r { color: var(–red); }
+.score-num.y { color: var(–yellow); }
+.score-num.g { color: var(–green); }
+.score-verdict {
+font-family: var(–mono);
+font-size: 11px;
+letter-spacing: 2px;
+margin-top: 6px;
+}
+.score-verdict.r { color: var(–red); }
+.score-verdict.y { color: var(–yellow); }
+.score-verdict.g { color: var(–green); }
+
+/* Stats */
+.stats-row {
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 1px;
+background: var(–line);
+border: 1px solid var(–line);
+margin: 24px 0;
+}
+@media(max-width:580px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+
+.stat {
+background: var(–bg2);
+padding: 18px 20px;
+transition: background 0.2s;
+}
+.stat:hover { background: var(–bg3); }
+.stat-top {
+font-family: var(–mono);
+font-size: 9px;
+letter-spacing: 2px;
+color: var(–t3);
+margin-bottom: 10px;
+}
+.stat-num {
+font-family: var(–mono);
+font-size: 26px;
+font-weight: 700;
+line-height: 1;
+margin-bottom: 4px;
+}
+.stat-num.r { color: var(–red); }
+.stat-num.y { color: var(–yellow); }
+.stat-num.g { color: var(–green); }
+.stat-num.w { color: var(–t1); }
+.stat-sub { font-size: 11px; color: var(–t3); }
+
+/* Alert */
+.alert {
+border-left: 3px solid var(–red);
+background: var(–red3);
+padding: 18px 22px;
+margin: 0 0 24px;
+display: flex;
+gap: 14px;
+}
+.alert.safe { border-left-color: var(–green); background: var(–green2); }
+.alert-icon { font-size: 16px; flex-shrink: 0; padding-top: 2px; }
+.alert-head { font-family: var(–mono); font-size: 10px; letter-spacing: 2px; color: var(–red); margin-bottom: 7px; }
+.alert.safe .alert-head { color: var(–green); }
+.alert-body { font-size: 13px; color: var(–t2); line-height: 1.75; }
+.alert-body strong { color: var(–t1); font-weight: 500; }
+
+/* Section head */
+.sh {
+font-family: var(–mono);
+font-size: 9px;
+letter-spacing: 4px;
+color: var(–t3);
+margin: 28px 0 12px;
+display: flex;
+align-items: center;
+gap: 12px;
+text-transform: uppercase;
+}
+.sh::after { content:’’; flex:1; height:1px; background: var(–line); }
+
+/* Timeline */
+.tl { display: flex; flex-direction: column; gap: 1px; margin-bottom: 8px; }
+.tl-row {
+display: grid;
+grid-template-columns: 90px 1fr auto;
+gap: 16px;
+align-items: center;
+background: var(–bg2);
+padding: 13px 18px;
+border: 1px solid var(–line);
+transition: border-color 0.15s, background 0.15s;
+}
+.tl-row:hover { border-color: var(–line2); background: var(–bg3); }
+@media(max-width:500px) {
+.tl-row { grid-template-columns: 1fr auto; }
+.tl-date { display: none; }
+}
+.tl-date { font-family: var(–mono); font-size: 10px; color: var(–t3); }
+.tl-ev { font-size: 13px; color: var(–t1); font-weight: 500; }
+.tl-ev small { display:block; font-size:11px; color: var(–t2); font-weight:300; margin-top:2px; }
+.chip {
+font-family: var(–mono);
+font-size: 9px;
+letter-spacing: 1px;
+padding: 3px 9px;
+white-space: nowrap;
+font-weight: 600;
+}
+.chip.pump { background: var(–yellow2); color: var(–yellow); border: 1px solid rgba(255,195,0,0.25); }
+.chip.exit { background: var(–red2); color: var(–red); border: 1px solid rgba(255,45,85,0.3); }
+.chip.dump { background: rgba(255,45,85,0.2); color: #ff6680; border: 1px solid rgba(255,45,85,0.4); }
+.chip.hold { background: var(–green2); color: var(–green); border: 1px solid rgba(0,214,143,0.25); }
+.chip.win  { background: var(–green2); color: var(–green); border: 1px solid rgba(0,214,143,0.3); }
+
+/* Simulator */
+.sim-box {
+background: var(–bg2);
+border: 1px solid var(–line);
+padding: 24px;
+margin: 0 0 24px;
+}
+.sim-title { font-family: var(–mono); font-size: 10px; letter-spacing: 3px; color: var(–t3); margin-bottom: 18px; }
+.sim-controls {
+display: flex;
+gap: 10px;
+align-items: stretch;
+flex-wrap: wrap;
+}
+.sim-input-wrap {
+display: flex;
+align-items: center;
+gap: 10px;
+background: var(–bg3);
+border: 1px solid var(–line2);
+padding: 10px 16px;
+flex: 1;
+min-width: 180px;
+}
+.sim-input-wrap label { font-family: var(–mono); font-size: 10px; color: var(–t3); letter-spacing: 1px; white-space: nowrap; }
+#simAmount {
+flex: 1;
+background: transparent;
+border: none;
+outline: none;
+color: var(–t1);
+font-family: var(–mono);
+font-size: 18px;
+font-weight: 700;
+text-align: right;
+width: 80px;
+}
+.sim-unit { font-family: var(–mono); font-size: 11px; color: var(–t3); }
+.sim-run {
+background: transparent;
+border: 1px solid var(–yellow);
+color: var(–yellow);
+font-family: var(–mono);
+font-size: 10px;
+font-weight: 700;
+letter-spacing: 2px;
+padding: 10px 24px;
+cursor: pointer;
+transition: background 0.15s, color 0.15s;
+}
+.sim-run:hover { background: var(–yellow2); }
+
+#simOut { display: none; margin-top: 16px; }
+.sim-out-grid {
+display: grid;
+grid-template-columns: 1fr 1fr 1fr;
+gap: 1px;
+background: var(–line);
+border: 1px solid var(–line);
+}
+@media(max-width:480px) { .sim-out-grid { grid-template-columns: 1fr; } }
+.sim-cell {
+background: var(–bg3);
+padding: 16px 18px;
+}
+.sim-cell-label { font-family: var(–mono); font-size: 9px; letter-spacing: 2px; color: var(–t3); margin-bottom: 8px; }
+.sim-cell-val { font-family: var(–mono); font-size: 20px; font-weight: 700; }
+.sim-cell-val.loss { color: var(–red); }
+.sim-cell-val.gain { color: var(–green); }
+
+/* OKX tools callout */
+.kit-callout {
+background: var(–bg2);
+border: 1px solid rgba(255,195,0,0.15);
+padding: 20px 24px;
+margin: 0 0 0;
+display: flex;
+gap: 20px;
+align-items: flex-start;
+flex-wrap: wrap;
+}
+.kit-left {}
+.kit-eyebrow { font-family: var(–mono); font-size: 9px; letter-spacing: 3px; color: var(–yellow); margin-bottom: 6px; }
+.kit-title { font-size: 14px; font-weight: 700; color: var(–t1); margin-bottom: 8px; }
+.kit-tools { display: flex; flex-wrap: wrap; gap: 5px; }
+.kit-tool {
+font-family: var(–mono);
+font-size: 9px;
+letter-spacing: 1px;
+padding: 3px 9px;
+background: var(–yellow2);
+color: var(–yellow);
+border: 1px solid rgba(255,195,0,0.2);
+}
+
+/* ── LEADERBOARD ── */
+.lb-section { padding: 56px 0 0; border-top: 1px solid var(–line); }
+.lb-head { margin-bottom: 28px; }
+.lb-head h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+.lb-head p { font-size: 13px; color: var(–t2); }
+
+.lb-table { width:100%; border-collapse:collapse; }
+.lb-table thead tr { border-bottom: 1px solid var(–line2); }
+.lb-table th {
+font-family: var(–mono);
+font-size: 9px;
+letter-spacing: 2px;
+color: var(–t3);
+padding: 8px 14px;
+text-align: left;
+font-weight: 400;
+}
+.lb-table td {
+padding: 13px 14px;
+font-size: 13px;
+border-bottom: 1px solid var(–line);
+}
+.lb-table tbody tr { transition: background 0.15s; }
+.lb-table tbody tr:hover td { background: var(–bg2); }
+.lb-rank { font-family: var(–mono); font-size: 11px; color: var(–t3); }
+.lb-name { font-weight: 700; margin-bottom: 2px; }
+.lb-handle { font-family: var(–mono); font-size: 10px; color: var(–t3); }
+.lb-score-wrap {}
+.lb-score { font-family: var(–mono); font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.lb-bar { height: 2px; width: 64px; background: var(–line); position: relative; }
+.lb-bar-fill { position:absolute; left:0; top:0; height:100%; }
+
+/* ── FOOTER ── */
+footer {
+border-top: 1px solid var(–line);
+padding: 32px 24px;
+text-align: center;
+font-family: var(–mono);
+font-size: 10px;
+letter-spacing: 2px;
+color: var(–t3);
+position: relative;
+z-index: 1;
+}
+footer a { color: var(–red); text-decoration: none; }
+</style>
+
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div class="nav-dot"></div>
+    反<span class="nav-slash">/</span>KOL Agent
+  </div>
+  <div class="nav-right">
+    <div class="nav-tag okx">OKX Trade Kit</div>
+    <div class="nav-tag live">DEMO LIVE</div>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-eyebrow">OKX AI松 · 创意赛道</div>
+      <h1>
+        <span class="h1-dim">你关注的 KOL</span><br>
+        <span class="h1-red">上次何时跑路？</span>
+      </h1>
+      <p class="hero-desc">
+        基于 <strong>OKX Agent Trade Kit</strong> 链上数据，
+        在你点击「跟单」的 3 秒前，
+        弹出该 KOL 的历史喊单胜率、出货时间窗口与粉丝亏损真相。
+        <br><br>
+        <strong>数据不说谎。KOL 会。</strong>
+      </p>
+    </div>
+    <div class="hero-stats">
+      <div class="hstat">
+        <div class="hstat-val">83</div>
+        <div class="hstat-label">TRADE KIT TOOLS</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-val">3s</div>
+        <div class="hstat-label">INTERCEPT WINDOW</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-val">∞</div>
+        <div class="hstat-label">ON-CHAIN MEMORY</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+
+  <div class="search-section">
+    <div class="s-label">// KOL 档案查询</div>
+    <div class="search-wrap">
+      <div class="s-pre">@</div>
+      <input type="text" id="kolInput" placeholder="输入 KOL 用户名，按 Enter 查询..." autocomplete="off"/>
+      <button class="s-btn" onclick="runQuery()">查档案 →</button>
+    </div>
+    <div class="quick-row">
+      <span class="q-label">测试 →</span>
+      <div class="qpick" onclick="quickPick('PumpMaster3000')"><span class="dot r"></span>PumpMaster3000</div>
+      <div class="qpick" onclick="quickPick('MoonBoyKing')"><span class="dot r"></span>MoonBoyKing</div>
+      <div class="qpick" onclick="quickPick('CryptoSage99')"><span class="dot y"></span>CryptoSage99</div>
+      <div class="qpick" onclick="quickPick('BlockchainGuru')"><span class="dot g"></span>BlockchainGuru</div>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+
+  <div id="loading">
+    <div class="ld-inner">
+      <div class="ld-title" id="ldTitle">// 链上扫描中...</div>
+      <div class="ld-bar"></div>
+      <div id="ldSteps"></div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+
+  <div id="result"></div>
+
+  <!-- LEADERBOARD -->
+
+  <div class="lb-section" id="lbSection">
+    <div class="lb-head">
+      <h2>KOL 诚信排行榜</h2>
+      <p>基于 OKX Agent Trade Kit 链上数据 · 自动更新 · 链上可验证 · 模拟演示</p>
+    </div>
+    <table class="lb-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>KOL</th>
+          <th>喊单胜率</th>
+          <th>喊单→出货</th>
+          <th>粉丝均损</th>
+          <th>危险分</th>
+        </tr>
+      </thead>
+      <tbody id="lbBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<footer>
+  反KOL Agent · <a href="#">OKX AI松 创意赛道</a> · Powered by OKX Agent Trade Kit · 所有数据为模拟演示
+</footer>
+
+<script>
+const DB = {
+  pumpmaster3000: {
+    name:'PumpMaster3000', handle:'@pumpmaster3000', emoji:'🚀',
+    followers:'56.7K', dangerScore:97,
+    winRate:9, holdH:0.4, followerLoss:'-83%', lossNum:-83,
+    totalShills:61, rugCount:55, exitDelay:'约3分钟',
+    timeline:[
+      {date:'03-21',ev:'喊单 $ROCKETINU',detail:'"10000x 就在今晚！！！"',type:'pump'},
+      {date:'03-21',ev:'链上出货 $ROCKETINU',detail:'3分12秒后清仓，获利 340K USDT',type:'exit'},
+      {date:'03-21',ev:'代币跌幅 -97%',detail:'30分钟内接近归零，跟单者损失惨重',type:'dump'},
+      {date:'03-19',ev:'喊单 $MOONSHIB',detail:'"社区最强 meme，冲！"',type:'pump'},
+      {date:'03-19',ev:'链上出货 $MOONSHIB',detail:'2分30秒后清仓完毕',type:'exit'},
+    ],
+    warning:'该账号过去 30 天内 61 条喊单中 55 条在 5 分钟内出现链上大额出货。平均粉丝亏损 83%。多个关联地址已被 OKX Agent Trade Kit 标记为<strong>「连环 rug 高危地址」</strong>。',
+    kitTools:['get_trades','get_account_balance','market_order','get_ticker','get_order_book'],
+  },
+  moonboyking: {
+    name:'MoonBoyKing', handle:'@moonboyking', emoji:'🐊',
+    followers:'128.4K', dangerScore:91,
+    winRate:18, holdH:2.3, followerLoss:'-68%', lossNum:-68,
+    totalShills:47, rugCount:31, exitDelay:'约14分钟',
+    timeline:[
+      {date:'03-18',ev:'喊单 $MOONX',detail:'"百倍潜力，团队实力强，安全审计通过"',type:'pump'},
+      {date:'03-18',ev:'链上出货 $MOONX',detail:'14分钟后清仓 2.1M USDT',type:'exit'},
+      {date:'03-18',ev:'价格 -72%',detail:'当日跌幅 72%，持仓粉丝全面被套',type:'dump'},
+      {date:'02-28',ev:'喊单 $SAFEMARS',detail:'"下一个 SHIB，上车机会只有今晚"',type:'pump'},
+      {date:'02-28',ev:'链上出货 $SAFEMARS',detail:'8分钟后清仓，获利 890K USDT',type:'exit'},
+    ],
+    warning:'该 KOL 过去 90 天内 47 条喊单中 31 条在喊单 30 分钟内出现大额卖出。惯用话术为「安全审计」「限时」等，实为在粉丝拉盘后迅速出货。OKX Agent Trade Kit 已标记该钱包为<strong>「高频喊单出货模式」</strong>。',
+    kitTools:['get_trades','get_positions','place_order','get_ticker','get_candlesticks'],
+  },
+  cryptosage99: {
+    name:'CryptoSage99', handle:'@cryptosage99', emoji:'🧙',
+    followers:'89.2K', dangerScore:73,
+    winRate:34, holdH:18.6, followerLoss:'-41%', lossNum:-41,
+    totalShills:29, rugCount:12, exitDelay:'约4小时',
+    timeline:[
+      {date:'03-20',ev:'喊单 $AITOKEN',detail:'"AI 赛道真正去中心化，技术面突破"',type:'pump'},
+      {date:'03-21',ev:'链上减仓 60%',detail:'喊单约4小时后分批出货',type:'exit'},
+      {date:'03-22',ev:'跟单者亏损 -41%',detail:'继续持有的粉丝平均亏损 41%',type:'dump'},
+      {date:'02-15',ev:'喊单 $DEFIKING',detail:'"基本面扎实，团队背景强"',type:'pump'},
+      {date:'02-18',ev:'链上出货',detail:'3天后分批减仓完毕',type:'exit'},
+    ],
+    warning:'该 KOL 持仓时间相对较长，但链上数据显示每次喊单后均在粉丝充分建仓后分批减仓。出货方式隐蔽，但 OKX Agent Trade Kit 通过<strong>地址归集分析</strong>仍识别出一致的出货模式。',
+    kitTools:['get_trades','get_candlesticks','get_positions','limit_order','get_instrument_info'],
+  },
+  blockchainguru: {
+    name:'BlockchainGuru', handle:'@blockchainguru', emoji:'📊',
+    followers:'210K', dangerScore:22,
+    winRate:71, holdH:168, followerLoss:'+18%', lossNum:18,
+    totalShills:38, rugCount:3, exitDelay:'7天以上',
+    timeline:[
+      {date:'03-10',ev:'看多 ETH',detail:'"技术面突破压力位，目标 4200"',type:'pump'},
+      {date:'03-17',ev:'持仓未变动',detail:'7天后仍保留 100% 仓位，与喊单一致',type:'hold'},
+      {date:'03-22',ev:'跟单均盈 +18%',detail:'策略有效，跟单者普遍实现盈利',type:'win'},
+      {date:'02-20',ev:'看多 BTC 突破',detail:'"关键支撑有效，多头结构完整"',type:'pump'},
+      {date:'02-28',ev:'目标位达成',detail:'预测准确，跟单者平均盈利 +23%',type:'win'},
+    ],
+    warning:null,
+    kitTools:['get_candlesticks','get_order_book','get_ticker','get_account_balance','get_instruments'],
+  },
+};
+
+const LB = [
+  {name:'PumpMaster3000',handle:'@pumpmaster3000',winRate:9,holdH:0.4,loss:'-83%',lossPos:false,score:97},
+  {name:'MoonBoyKing',handle:'@moonboyking',winRate:18,holdH:2.3,loss:'-68%',lossPos:false,score:91},
+  {name:'CryptoSage99',handle:'@cryptosage99',winRate:34,holdH:18.6,loss:'-41%',lossPos:false,score:73},
+  {name:'WhaleCaller',handle:'@whalecaller',winRate:44,holdH:36,loss:'-22%',lossPos:false,score:48},
+  {name:'BlockchainGuru',handle:'@blockchainguru',winRate:71,holdH:168,loss:'+18%',lossPos:true,score:22},
+];
+
+const STEPS = [
+  '识别链上钱包地址...',
+  '获取 180 天交易历史...',
+  '比对喊单发布时间戳...',
+  '计算粉丝跟单损益...',
+  '生成信用档案...',
+];
+
+function quickPick(n){ document.getElementById('kolInput').value=n; runQuery(); }
+
+function runQuery(){
+  const raw = document.getElementById('kolInput').value.trim();
+  if(!raw) return;
+  const key = raw.toLowerCase().replace('@','').replace(/\s/g,'');
+  const data = DB[key] || genGeneric(raw);
+
+  document.getElementById('result').style.display='none';
+  const ld = document.getElementById('loading');
+  const ldSteps = document.getElementById('ldSteps');
+  ldSteps.innerHTML = '';
+  ld.style.display = 'block';
+
+  // render step rows
+  const stepEls = STEPS.map((s,i)=>{
+    const el = document.createElement('div');
+    el.className = 'ld-step';
+    el.textContent = s;
+    el.id = 'ldStep'+i;
+    ldSteps.appendChild(el);
+    return el;
+  });
+
+  let cur = 0;
+  const iv = setInterval(()=>{
+    if(cur < stepEls.length){
+      if(cur > 0) { stepEls[cur-1].className='ld-step done'; }
+      stepEls[cur].className='ld-step active';
+      document.getElementById('ldTitle').textContent = '// ' + STEPS[cur];
+      cur++;
+    } else {
+      stepEls[stepEls.length-1].className='ld-step done';
+      clearInterval(iv);
+      setTimeout(()=>{
+        ld.style.display='none';
+        renderResult(data);
+        document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
+      }, 400);
+    }
+  }, 480);
+}
+
+function genGeneric(name){
+  const s = Math.floor(Math.random()*60)+20;
+  const wr = Math.floor(Math.random()*40)+20;
+  const loss = -(Math.floor(Math.random()*50)+10);
+  return {
+    name, handle:'@'+name.toLowerCase(), emoji:'🔍', followers:(Math.floor(Math.random()*80)+10)+'K',
+    dangerScore:s, winRate:wr, holdH:(Math.random()*20+1).toFixed(1),
+    followerLoss:loss+'%', lossNum:loss, totalShills:Math.floor(Math.random()*25)+5,
+    rugCount:Math.floor(Math.random()*8)+1, exitDelay:Math.floor(Math.random()*120)+'分钟',
+    timeline:[
+      {date:'近期',ev:'检测到喊单行为',detail:'正在分析链上对应出货记录...',type:'pump'},
+      {date:'近期',ev:'链上数据分析中',detail:'建议等待更多数据确认',type:'hold'},
+    ],
+    warning:`已在 ${name} 的关联钱包检测到一定程度的喊单-出货行为。建议跟单前通过 OKX Agent Trade Kit 独立验证链上仓位数据。`,
+    kitTools:['get_trades','get_ticker','get_order_book','get_positions','get_candlesticks'],
+  };
+}
+
+function renderResult(d){
+  const sc = d.dangerScore;
+  const cls = sc>=80?'r': sc>=50?'y':'g';
+  const verdict = sc>=80?'⚠ 极度危险': sc>=50?'⚡ 存在风险':'✓ 相对可信';
+  const isPos = d.lossNum > 0;
+
+  const tlHtml = d.timeline.map(t=>`
+    <div class="tl-row">
+      <div class="tl-date">${t.date}</div>
+      <div class="tl-ev">${t.ev}<small>${t.detail}</small></div>
+      <div class="chip ${t.type}">${{pump:'喊单',exit:'出货',dump:'崩盘',hold:'持仓',win:'盈利'}[t.type]||t.type}</div>
+    </div>
+  `).join('');
+
+  const alertHtml = d.warning
+    ? `<div class="alert"><div class="alert-icon">⚠️</div><div><div class="alert-head">// AGENT 风险提示</div><div class="alert-body">${d.warning}</div></div></div>`
+    : `<div class="alert safe"><div class="alert-icon">✅</div><div><div class="alert-head">// AGENT 信任评估</div><div class="alert-body">该 KOL 链上持仓行为与喊单内容高度一致，历史跟单者多数实现正收益。仍建议独立研究，任何投资均存在风险。</div></div></div>`;
+
+  const kitHtml = (d.kitTools||[]).map(t=>`<div class="kit-tool">${t}</div>`).join('');
+
+  const holdStr = d.holdH < 1 ? Math.round(d.holdH*60)+'min' : d.holdH+'h';
+
+  const html = `
+    <div class="profile-row">
+      <div class="profile-left">
+        <div class="avatar">
+          ${d.emoji}
+          <div class="avatar-badge${d.dangerScore<40?' safe':''}">${d.dangerScore<40?'SAFE':'RISK'}</div>
+        </div>
+        <div>
+          <div class="profile-name">${d.name}</div>
+          <div class="profile-handle">${d.handle} · ${d.followers} followers</div>
+        </div>
+      </div>
+      <div class="score-block">
+        <div class="score-eyebrow">DANGER SCORE</div>
+        <div class="score-num ${cls}">${sc}</div>
+        <div class="score-verdict ${cls}">${verdict}</div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-top">喊单胜率</div>
+        <div class="stat-num ${d.winRate<30?'r':d.winRate<50?'y':'g'}">${d.winRate}%</div>
+        <div class="stat-sub">共 ${d.totalShills} 条记录</div>
+      </div>
+      <div class="stat">
+        <div class="stat-top">喊单→出货</div>
+        <div class="stat-num ${parseFloat(d.holdH)<1?'r':parseFloat(d.holdH)<12?'y':'g'}">${holdStr}</div>
+        <div class="stat-sub">平均时间差</div>
+      </div>
+      <div class="stat">
+        <div class="stat-top">确认 Rug 次数</div>
+        <div class="stat-num ${d.rugCount>10?'r':d.rugCount>3?'y':'g'}">${d.rugCount}</div>
+        <div class="stat-sub">链上可验证</div>
+      </div>
+      <div class="stat">
+        <div class="stat-top">粉丝均损</div>
+        <div class="stat-num ${isPos?'g':d.lossNum>-30?'y':'r'}">${d.followerLoss}</div>
+        <div class="stat-sub">历史跟单均值</div>
+      </div>
+    </div>
+
+    ${alertHtml}
+
+    <div class="sh">喊单 · 出货时间线</div>
+    <div class="tl">${tlHtml}</div>
+
+    <div class="sh" style="margin-top:24px">如果你当时跟单了</div>
+    <div class="sim-box">
+      <div class="sim-title">// TRADE SIMULATION · 基于历史平均损益</div>
+      <div class="sim-controls">
+        <div class="sim-input-wrap">
+          <label>投入</label>
+          <input type="number" id="simAmount" value="1000" min="1"/>
+          <span class="sim-unit">USDT</span>
+        </div>
+        <button class="sim-run" onclick="simulate(${d.lossNum})">计算结果 →</button>
+      </div>
+      <div id="simOut">
+        <div class="sim-out-grid">
+          <div class="sim-cell"><div class="sim-cell-label">投入本金</div><div class="sim-cell-val" id="svPrincipal" style="color:var(--t1)">—</div></div>
+          <div class="sim-cell"><div class="sim-cell-label">当前价值</div><div class="sim-cell-val" id="svValue">—</div></div>
+          <div class="sim-cell"><div class="sim-cell-label">盈亏</div><div class="sim-cell-val" id="svPnl">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sh">调用 OKX Agent Trade Kit 工具</div>
+    <div class="kit-callout">
+      <div class="kit-left">
+        <div class="kit-eyebrow">// OKX AGENT TRADE KIT · 83 TOOLS</div>
+        <div class="kit-title">本次分析调用工具</div>
+        <div class="kit-tools">${kitHtml}</div>
+      </div>
+    </div>
+  `;
+
+  const el = document.getElementById('result');
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+
+function simulate(rate){
+  const amt = parseFloat(document.getElementById('simAmount').value)||1000;
+  const val = Math.max(0, amt*(1+rate/100));
+  const pnl = val-amt;
+  document.getElementById('svPrincipal').textContent = amt.toLocaleString()+' USDT';
+  document.getElementById('svValue').textContent = val.toFixed(0)+' USDT';
+  document.getElementById('svValue').className = 'sim-cell-val '+(pnl<0?'loss':'gain');
+  document.getElementById('svPnl').textContent = (pnl>=0?'+':'')+pnl.toFixed(0)+' USDT';
+  document.getElementById('svPnl').className = 'sim-cell-val '+(pnl<0?'loss':'gain');
+  document.getElementById('simOut').style.display='block';
+}
+
+// Build leaderboard
+function buildLB(){
+  const tbody = document.getElementById('lbBody');
+  tbody.innerHTML = LB.map((r,i)=>{
+    const sc = r.score;
+    const col = sc>=80?'var(--red)': sc>=50?'var(--yellow)':'var(--green)';
+    const lossCol = r.lossPos?'var(--green)':'var(--red)';
+    const holdStr = r.holdH<1?Math.round(r.holdH*60)+'min':r.holdH+'h';
+    return `<tr>
+      <td class="lb-rank">${String(i+1).padStart(2,'0')}</td>
+      <td><div class="lb-name">${r.name}</div><div class="lb-handle">${r.handle}</div></td>
+      <td style="font-family:var(--mono);color:${r.winRate<30?'var(--red)':r.winRate<50?'var(--yellow)':'var(--green)'}">${r.winRate}%</td>
+      <td style="font-family:var(--mono);color:var(--t2)">${holdStr}</td>
+      <td style="font-family:var(--mono);color:${lossCol};font-weight:700">${r.loss}</td>
+      <td class="lb-score-wrap">
+        <div class="lb-score" style="color:${col}">${sc}</div>
+        <div class="lb-bar"><div class="lb-bar-fill" style="width:${sc}%;background:${col}"></div></div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('kolInput').addEventListener('keydown',e=>{ if(e.key==='Enter') runQuery(); });
+buildLB();
+</script>
+
+</body>
+</html>
